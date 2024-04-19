@@ -28,7 +28,7 @@
 
 from matplotlib.pyplot import axis
 import matplotlib.pyplot as plt
-from PIL import Image as Im
+from PIL import Image
 
 import numpy as np
 import os
@@ -41,7 +41,8 @@ from bidexhands.tasks.hand_base.base_task import BaseTask
 from isaacgym import gymtorch
 from isaacgym import gymapi
 
-class ShadowHandPointCloud(BaseTask):
+
+class ShadowHandPCD(BaseTask):
     def __init__(self, cfg, sim_params, physics_engine, device_type, device_id, headless, agent_index=[[[0, 1, 2, 3, 4, 5]], [[0, 1, 2, 3, 4, 5]]], is_multi_agent=False):
         self.cfg = cfg
         self.sim_params = sim_params
@@ -394,7 +395,7 @@ class ShadowHandPointCloud(BaseTask):
             self.pointCloudVisualizer = PointcloudVisualizer()
             self.pointCloudVisualizerInitialized = False
             self.o3d_pc = o3d.geometry.PointCloud()
-        else :
+        else:
             self.pointCloudVisualizer = None
 
         for i in range(self.num_envs):
@@ -605,7 +606,8 @@ class ShadowHandPointCloud(BaseTask):
         # self.obs_buf[:, goal_obs_start + 7:goal_obs_start + 11] = quat_mul(self.object_rot, quat_conjugate(self.goal_rot))
 
         point_clouds = torch.zeros((self.num_envs, self.pointCloudDownsampleNum, 3), device=self.device)
-        
+
+        # plot an image every step of env 0
         self.camera_rgba_debug_fig = plt.figure("CAMERA_RGBD_DEBUG")
         camera_rgba_image = self.camera_visulization(is_depth_image=False)
         print(camera_rgba_image)
@@ -637,6 +639,7 @@ class ShadowHandPointCloud(BaseTask):
             self.pointCloudVisualizer.update(self.o3d_pc)
 
         self.gym.end_access_image_tensors(self.sim)
+        # point cloud minus origin?? to normalize to 0
         point_clouds -= self.env_origin.view(self.num_envs, 1, 3)
 
         point_clouds_start = goal_obs_start + 11
@@ -821,13 +824,13 @@ class ShadowHandPointCloud(BaseTask):
             torch_depth_tensor = scale(torch_depth_tensor, to_torch([0], dtype=torch.float, device=self.device),
                                                          to_torch([256], dtype=torch.float, device=self.device))
             camera_image = torch_depth_tensor.cpu().numpy()
-            camera_image = Im.fromarray(camera_image)
+            camera_image = Image.fromarray(camera_image)
         
         else:
             camera_rgba_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_COLOR)
             torch_rgba_tensor = gymtorch.wrap_tensor(camera_rgba_tensor)
             camera_image = torch_rgba_tensor.cpu().numpy()
-            camera_image = Im.fromarray(camera_image)
+            camera_image = Image.fromarray(camera_image)
         
         return camera_image
 
@@ -836,16 +839,18 @@ class ShadowHandPointCloud(BaseTask):
         return tensor[torch.randint(low=0, high=row_total, size=(dim_needed,)),:]
 
     def sample_points(self, points, sample_num=1000, sample_mathed='furthest'):
-        eff_points = points[points[:, 2]>0.04]
-        if eff_points.shape[0] < sample_num :
+        # remove points below 4 cm in z axis
+        eff_points = points[points[:, 2] > 0.04]
+        if eff_points.shape[0] < sample_num:
             eff_points = points
         if sample_mathed == 'random':
             sampled_points = self.rand_row(eff_points, sample_num)
         return sampled_points
 
 #####################################################################
-###=========================jit functions=========================###
+# ##=========================jit functions=========================###
 #####################################################################
+
 
 @torch.jit.script
 def depth_image_to_point_cloud_GPU(camera_tensor, camera_view_matrix_inv, camera_proj_matrix, u, v, width:float, height:float, depth_bar:float, device:torch.device):
@@ -881,6 +886,7 @@ def depth_image_to_point_cloud_GPU(camera_tensor, camera_view_matrix_inv, camera
     points = position[:, 0:3]
 
     return points
+
 
 @torch.jit.script
 def compute_hand_reward(

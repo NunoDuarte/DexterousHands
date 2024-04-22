@@ -660,32 +660,32 @@ class ShadowHandPCDtest(BaseTask):
 
         # for i in range(self.num_envs):
         # points = depth_image_to_point_cloud_GPU(self.camera_tensors[i], self.camera_view_matrixs[i], self.camera_proj_matrixs[i], self.camera_u2, self.camera_v2, self.camera_props.width, self.camera_props.height, 10, self.device)
-        depth_buffer = self.camera_tensors[0].to(self.device)
-        vinv = self.camera_view_matrixs[0]
-        proj = self.camera_proj_matrixs[0]
-
-        fu = 2 / proj[0, 0]
-        fv = 2 / proj[1, 1]
-
-        Z = depth_buffer
-        width = self.camera_props.width
-        height = self.camera_props.height
-        centerU = width / 2
-        centerV = height / 2
-        u = self.camera_u2
-        v = self.camera_v2
-        X = -(u - centerU) / width * Z * fu
-        Y = (v - centerV) / height * Z * fv
-        Z = Z.view(-1)
-        valid = Z > -10
-        X = X.view(-1)
-        Y = Y.view(-1)
-
-        position = torch.vstack((X, Y, Z, torch.ones(len(X), device=self.device)))[:, valid]
-        position = position.permute(1, 0)
-        position = position @ vinv
-        # print('position', position)
-        print('size POSITION ', position.shape)
+        # depth_buffer = self.camera_tensors[0].to(self.device)
+        # vinv = self.camera_view_matrixs[0]
+        # proj = self.camera_proj_matrixs[0]
+        #
+        # fu = 2 / proj[0, 0]
+        # fv = 2 / proj[1, 1]
+        #
+        # Z = depth_buffer
+        # width = self.camera_props.width
+        # height = self.camera_props.height
+        # centerU = width / 2
+        # centerV = height / 2
+        # u = self.camera_u2
+        # v = self.camera_v2
+        # X = -(u - centerU) / width * Z * fu
+        # Y = (v - centerV) / height * Z * fv
+        # Z = Z.view(-1)
+        # valid = Z > -10
+        # X = X.view(-1)
+        # Y = Y.view(-1)
+        #
+        # position = torch.vstack((X, Y, Z, torch.ones(len(X), device=self.device)))[:, valid]
+        # position = position.permute(1, 0)
+        # position = position @ vinv
+        # # print('position', position)
+        # print('size POSITION ', position.shape)
 
         # ########################## After ##################
         # Convert camera tensors, view matrices, and projection matrices to device
@@ -724,22 +724,25 @@ class ShadowHandPCDtest(BaseTask):
         position = position.view(self.num_envs, 4, -1)
         position = position.permute(0, 2, 1)
         position = position @ vinv_tensor
-        # print('position', position)
-        print('size POSITION ', position.shape)
         points_envs = position[:, :, 0:3]
 
-        # if points_envs.shape[0] > 0:
-        #     selected_points = self.sample_points(points_envs, sample_num=self.pointCloudDownsampleNum, sample_mathed='random')
-        # else:
-        #     selected_points = torch.zeros((self.num_envs, self.pointCloudDownsampleNum, 3), device=self.device)
-        # point_clouds[i] = selected_points
+        sample_num = self.pointCloudDownsampleNum
+        sample_mathed = 'random'
 
-        # print('points_envs shape', points_envs.shape)
-        # print('points_envs ', points_envs)
+        # remove points below 4 cm in z axis
+        mask_if = points_envs[:, :, 2] > 0.04
+        mask_if = mask_if.unsqueeze(-1).expand(-1, -1, 3)
+
+        eff_points = torch.where(mask_if, points_envs, torch.zeros_like(points_envs))
+        # print('size eff_points ', eff_points.shape)
+        if sample_mathed == 'random':
+            row_total = eff_points.shape[1]
+            sampled_points = eff_points[:, torch.randint(low=0, high=row_total, size=(sample_num,)), :]
+            # print('size eff_points ', sampled_points.shape)
+        point_clouds = sampled_points
 
         # print('size', point_clouds.shape)
         # print('points', point_clouds)
-        input()
 
         if self.pointCloudVisualizer is not None:
             import open3d as o3d
@@ -994,19 +997,6 @@ class ShadowHandPCDtest(BaseTask):
             camera_image = Image.fromarray(camera_image)
 
         return camera_image
-
-    def rand_row(self, tensor, dim_needed):
-        row_total = tensor.shape[0]
-        return tensor[torch.randint(low=0, high=row_total, size=(dim_needed,)), :]
-
-    def sample_points(self, points, sample_num=1000, sample_mathed='furthest'):
-        # remove points below 4 cm in z axis
-        eff_points = points[points[:, 2] > 0.04]
-        if eff_points.shape[0] < sample_num:
-            eff_points = points
-        if sample_mathed == 'random':
-            sampled_points = self.rand_row(eff_points, sample_num)
-        return sampled_points
 
 
 #####################################################################

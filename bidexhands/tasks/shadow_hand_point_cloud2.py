@@ -615,112 +615,132 @@ class ShadowHandPCDtest(BaseTask):
         plt.imshow(camera_rgba_image)
         plt.pause(1e-9)
 
-        for i in range(self.num_envs):
-            # points = depth_image_to_point_cloud_GPU(self.camera_tensors[i], self.camera_view_matrixs[i], self.camera_proj_matrixs[i], self.camera_u2, self.camera_v2, self.camera_props.width, self.camera_props.height, 10, self.device)
-            depth_buffer = self.camera_tensors[i].to(self.device)
-            vinv = self.camera_view_matrixs[i]
-            proj = self.camera_proj_matrixs[i]
+        # for i in range(self.num_envs):
+        # points = depth_image_to_point_cloud_GPU(self.camera_tensors[i], self.camera_view_matrixs[i], self.camera_proj_matrixs[i], self.camera_u2, self.camera_v2, self.camera_props.width, self.camera_props.height, 10, self.device)
+        depth_buffer = self.camera_tensors[0].to(self.device)
+        vinv = self.camera_view_matrixs[0]
+        proj = self.camera_proj_matrixs[0]
 
-            print(np.shape(depth_buffer))
-            print(np.shape(vinv))
-            print(np.shape(proj))
+        print(np.shape(depth_buffer))
+        print(np.shape(vinv))
+        print(np.shape(proj))
 
-            fu = 2 / proj[0, 0]
-            fv = 2 / proj[1, 1]
+        fu = 2 / proj[0, 0]
+        fv = 2 / proj[1, 1]
 
-            Z = depth_buffer
-            # print('before', fu)
-            # print('before', Z)
-            width = self.camera_props.width
-            height = self.camera_props.height
-            centerU = width / 2
-            u = self.camera_u2
-            v = self.camera_v2
-            centerV = height / 2
-            X1 = -(u - centerU) / width * Z * fu
+        Z = depth_buffer
+        # print('before', fu)
+        # print('before', Z)
+        width = self.camera_props.width
+        height = self.camera_props.height
+        centerU = width / 2
+        u = self.camera_u2
+        v = self.camera_v2
+        centerV = height / 2
+        X1 = -(u - centerU) / width * Z * fu
 
-            X = -(u - centerU) / width * Z * fu
-            Y = (v - centerV) / height * Z * fv
-            Z = Z.view(-1)
-            valid = Z > -10
-            X = X.view(-1)
-            Y = Y.view(-1)
+        X = -(u - centerU) / width * Z * fu
+        Y = (v - centerV) / height * Z * fv
+        Z = Z.view(-1)
+        valid = Z > -10
+        print('valid', valid)
+        print('size valid', valid.shape)
+        X = X.view(-1)
+        Y = Y.view(-1)
 
-            position = torch.vstack((X, Y, Z, torch.ones(len(X), device=self.device)))[:, valid]
-            print('position', position)
-            print('size POSITION ', position.shape)
+        position = torch.vstack((X, Y, Z, torch.ones(len(X), device=self.device)))
+        position = torch.vstack((X, Y, Z, torch.ones(len(X), device=self.device)))[:, valid]
+        print('position', position)
+        print('size POSITION ', position.shape)
+        position = position.permute(1, 0)
+        print('position', position)
+        print('size POSITION ', position.shape)
+        position = position @ vinv
+        print('position', position)
+        print('size POSITION ', position.shape)
 
-            print('before X', X1)
-            print('size', X1.shape)
+        print('before X', X1)
+        print('size', X1.shape)
 
-            # Convert camera tensors, view matrices, and projection matrices to device
-            depth_buffer = [tensor.to(self.device) for tensor in self.camera_tensors]
-            depth_buffer_tensor = torch.stack(depth_buffer, dim=0)
-            vinv = [matrix.to(self.device) for matrix in self.camera_view_matrixs]
-            vinv_tensor = torch.stack(vinv, dim=0)
-            proj = [matrix.to(self.device) for matrix in self.camera_proj_matrixs]
-            proj_tensor = torch.stack(proj, dim=0)
+        # Convert camera tensors, view matrices, and projection matrices to device
+        depth_buffer = [tensor.to(self.device) for tensor in self.camera_tensors]
+        depth_buffer_tensor = torch.stack(depth_buffer, dim=0)
+        vinv = [matrix.to(self.device) for matrix in self.camera_view_matrixs]
+        vinv_tensor = torch.stack(vinv, dim=0)
+        proj = [matrix.to(self.device) for matrix in self.camera_proj_matrixs]
+        proj_tensor = torch.stack(proj, dim=0)
 
-            print('size', depth_buffer_tensor.shape)
-            print('size', vinv_tensor.shape)
-            print('size', proj_tensor.shape)
+        print('size', depth_buffer_tensor.shape)
+        print('size', vinv_tensor.shape)
+        print('size', proj_tensor.shape)
 
-            fu = 2 / proj_tensor[:, 0, 0]
-            fv = 2 / proj_tensor[:, 1, 1]
-            print('after', fu)
-            print('size fu', fu.shape)
+        fu = 2 / proj_tensor[:, 0, 0]
+        fv = 2 / proj_tensor[:, 1, 1]
+        print('after', fu)
+        print('size fu', fu.shape)
 
-            width = self.camera_props.width
-            height = self.camera_props.height
-            centerU = width / 2
-            centerV = height / 2
-            Z = depth_buffer_tensor
+        width = self.camera_props.width
+        height = self.camera_props.height
+        centerU = width / 2
+        centerV = height / 2
+        Z = depth_buffer_tensor
 
-            print('after', Z)
-            u = self.camera_u2
-            v = self.camera_v2
+        print('after', Z)
+        u = self.camera_u2
+        v = self.camera_v2
 
-            fu = fu.view(self.num_envs, 1, 1)  # Reshaping b to [2, 1, 1]
-            fv = fv.view(self.num_envs, 1, 1)  # Reshaping b to [2, 1, 1]
+        fu = fu.view(self.num_envs, 1, 1)  # Reshaping b to [2, 1, 1]
+        fv = fv.view(self.num_envs, 1, 1)  # Reshaping b to [2, 1, 1]
 
-            # Perform the multiplication
-            X1 = Z * fu
-            print('after X', X1)
-            print('size', X1.shape)
-            X = -(u - centerU) / width * Z * fu
-            Y = (v - centerV) / height * Z * fv
-            print('after X', X)
-            print('size', X.shape)
+        # Perform the multiplication
+        X1 = Z * fu
+        print('after X', X1)
+        print('size', X1.shape)
+        X = -(u - centerU) / width * Z * fu
+        Y = (v - centerV) / height * Z * fv
+        print('after X', X)
+        print('size', X.shape)
 
-            print('after X, Y', X, Y)
-            Z = Z.view(Z.shape[0], -1)
-            print('size Z', Z.shape)
-            valid = Z > -10
-            print('size valid', valid.shape)
-            X = X.view(X.shape[0], -1)
-            Y = Y.view(Y.shape[0], -1)
-            print('X', X.shape)
-            print('len x', len(X))
-            ones = torch.ones(self.num_envs, X.shape[1], device=self.device)
+        print('after X, Y', X, Y)
+        Z = Z.view(Z.shape[0], -1)
+        print('size Z', Z.shape)
+        valid = Z > -10
+        print('size ', valid)
+        print('size valid', valid.shape)
+        X = X.view(X.shape[0], -1)
+        Y = Y.view(Y.shape[0], -1)
+        print('X', X.shape)
+        print('len x', len(X))
+        ones = torch.ones(self.num_envs, X.shape[1], device=self.device)
 
-            position = torch.stack((X, Y, Z, ones), dim=1)
-            print('position', position.shape)
-            position = position.permute(1, 0, 2)
-            position = position[:, valid]
-            print('position', position.shape)
-            #position = torch.vstack((X, Y, Z, torch.ones(X.shape[1], device=self.device)))[:, valid]
-            position = position.permute(1, 0)
-            position = position @ vinv
-            points = position[:, 0:3]
+        position = torch.stack((X, Y, Z, ones), dim=1)
+        print('position', position.shape)
+        # position = position.permute(1, 0, 2)
+        indices = torch.nonzero(valid, as_tuple=False)  # Shape: [N, 2], where N is the number of non-zero elements
+        output = position[indices[:, 0], :, indices[:, 1]]  # Shape: [N, 4], where N is the number of non-zero elements
+        position = output.view(2, 4, -1)
+        print('position shape', position.shape)
+        print('position ', position)
+        #position = torch.vstack((X, Y, Z, torch.ones(X.shape[1], device=self.device)))[:, valid]
+        position = position.permute(0, 2, 1)
+        print('position shape', position.shape)
+        print('position ', position)
+        position = position @ vinv_tensor
+        print('position shape', position.shape)
+        print('position ', position)
+        points_envs = position[:, :, 0:3]
 
-            if points.shape[0] > 0:
-                selected_points = self.sample_points(points, sample_num=self.pointCloudDownsampleNum, sample_mathed='random')
-            else:
-                selected_points = torch.zeros((self.num_envs, self.pointCloudDownsampleNum, 3), device=self.device)
-            point_clouds[i] = selected_points
+        # if points_envs.shape[0] > 0:
+        #     selected_points = self.sample_points(points_envs, sample_num=self.pointCloudDownsampleNum, sample_mathed='random')
+        # else:
+        #     selected_points = torch.zeros((self.num_envs, self.pointCloudDownsampleNum, 3), device=self.device)
+        # point_clouds[i] = selected_points
 
-        print('size', point_clouds.shape)
-        print('points', point_clouds)
+        print('points_envs shape', points_envs.shape)
+        print('points_envs ', points_envs)
+
+        # print('size', point_clouds.shape)
+        # print('points', point_clouds)
         input()
 
         if self.pointCloudVisualizer != None :

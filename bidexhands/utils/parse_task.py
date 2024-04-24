@@ -27,6 +27,7 @@ from bidexhands.tasks.shadow_hand_kettle import ShadowHandKettle
 from bidexhands.tasks.shadow_hand_block_stack import ShadowHandBlockStack
 from bidexhands.tasks.shadow_hand_point_cloud import ShadowHandPCD
 from bidexhands.tasks.shadow_hand_point_cloud2 import ShadowHandPCDtest
+from bidexhands.tasks.qbhand_grasp_pcd import QbHandPCD
 
 # Allegro hand
 from bidexhands.tasks.allegro_hand_over import AllegroHandOver

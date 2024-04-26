@@ -349,7 +349,7 @@ class QbHandPCD(BaseTaskQb):
         if self.object_type == "pen":
             object_start_pose.p.z = shadow_hand_start_pose.p.z + 0.02
 
-        self.goal_displacement = gymapi.Vec3(-0., 0.0, 0.)
+        self.goal_displacement = gymapi.Vec3(-0.2, 0.2, 0.2)
         self.goal_displacement_tensor = to_torch(
             [self.goal_displacement.x, self.goal_displacement.y, self.goal_displacement.z], device=self.device)
         goal_start_pose = gymapi.Transform()
@@ -403,7 +403,7 @@ class QbHandPCD(BaseTaskQb):
 
         self.camera_v2, self.camera_u2 = torch.meshgrid(self.camera_v, self.camera_u, indexing='ij')
 
-        if True:
+        if False:
             import open3d as o3d
             from bidexhands.utils.o3dviewer import PointcloudVisualizer
             self.pointCloudVisualizer = PointcloudVisualizer()
@@ -617,78 +617,14 @@ class QbHandPCD(BaseTaskQb):
         action_obs_start = fingertip_obs_start + 95
         self.obs_buf[:, action_obs_start:action_obs_start + 20] = self.actions[:, :20]
 
-        # # another_hand
-        # another_hand_start = action_obs_start + 20
-        # self.obs_buf[:, another_hand_start:self.num_shadow_hand_dofs + another_hand_start] = unscale(
-        #     self.shadow_hand_another_dof_pos,
-        #     self.shadow_hand_dof_lower_limits, self.shadow_hand_dof_upper_limits)
-        # self.obs_buf[:,
-        # self.num_shadow_hand_dofs + another_hand_start:2 * self.num_shadow_hand_dofs + another_hand_start] = self.vel_obs_scale * self.shadow_hand_another_dof_vel
-        # self.obs_buf[:,
-        # 2 * self.num_shadow_hand_dofs + another_hand_start:3 * self.num_shadow_hand_dofs + another_hand_start] = self.force_torque_obs_scale * self.dof_force_tensor[
-        #                                                                                                                                        :,
-        #                                                                                                                                        24:48]
-        #
-        # fingertip_another_obs_start = another_hand_start + 72
-        # self.obs_buf[:,
-        # fingertip_another_obs_start:fingertip_another_obs_start + num_ft_states] = self.fingertip_another_state.reshape(
-        #     self.num_envs, num_ft_states)
-        # self.obs_buf[:, fingertip_another_obs_start + num_ft_states:fingertip_another_obs_start + num_ft_states +
-        #                                                             num_ft_force_torques] = self.force_torque_obs_scale * self.vec_sensor_tensor[
-        #                                                                                                                   :,
-        #                                                                                                                   30:]
-        #
-        # action_another_obs_start = fingertip_another_obs_start + 95
-        # self.obs_buf[:, action_another_obs_start:action_another_obs_start + 20] = self.actions[:, 20:]
-        #
-        # obj_obs_start = action_another_obs_start + 20  # 144
-        # # self.obs_buf[:, obj_obs_start:obj_obs_start + 7] = self.object_pose
-        # # self.obs_buf[:, obj_obs_start + 7:obj_obs_start + 10] = self.object_linvel
-        # # self.obs_buf[:, obj_obs_start + 10:obj_obs_start + 13] = self.vel_obs_scale * self.object_angvel
-        #
-        # goal_obs_start = obj_obs_start + 13  # 157 = 144 + 13
-        # # self.obs_buf[:, goal_obs_start:goal_obs_start + 7] = self.goal_pose
-        # # self.obs_buf[:, goal_obs_start + 7:goal_obs_start + 11] = quat_mul(self.object_rot, quat_conjugate(self.goal_rot))
-
         goal_obs_start = action_obs_start + 20
 
-        point_clouds = torch.zeros((self.num_envs, self.pointCloudDownsampleNum, 3), device=self.device)
-
-        # plot an image every step of env 0
-        self.camera_rgba_debug_fig = plt.figure("CAMERA_RGBD_DEBUG")
-        camera_rgba_image = self.camera_visulization(is_depth_image=False)
-        print(camera_rgba_image)
-        plt.imshow(camera_rgba_image)
-        plt.pause(1e-9)
-
-        # for i in range(self.num_envs):
-        # points = depth_image_to_point_cloud_GPU(self.camera_tensors[i], self.camera_view_matrixs[i], self.camera_proj_matrixs[i], self.camera_u2, self.camera_v2, self.camera_props.width, self.camera_props.height, 10, self.device)
-        # depth_buffer = self.camera_tensors[0].to(self.device)
-        # vinv = self.camera_view_matrixs[0]
-        # proj = self.camera_proj_matrixs[0]
-        #
-        # fu = 2 / proj[0, 0]
-        # fv = 2 / proj[1, 1]
-        #
-        # Z = depth_buffer
-        # width = self.camera_props.width
-        # height = self.camera_props.height
-        # centerU = width / 2
-        # centerV = height / 2
-        # u = self.camera_u2
-        # v = self.camera_v2
-        # X = -(u - centerU) / width * Z * fu
-        # Y = (v - centerV) / height * Z * fv
-        # Z = Z.view(-1)
-        # valid = Z > -10
-        # X = X.view(-1)
-        # Y = Y.view(-1)
-        #
-        # position = torch.vstack((X, Y, Z, torch.ones(len(X), device=self.device)))[:, valid]
-        # position = position.permute(1, 0)
-        # position = position @ vinv
-        # # print('position', position)
-        # print('size POSITION ', position.shape)
+        # # plot an image every step of env 0
+        # self.camera_rgba_debug_fig = plt.figure("CAMERA_RGBD_DEBUG")
+        # camera_rgba_image = self.camera_visulization(is_depth_image=False)
+        # print(camera_rgba_image)
+        # plt.imshow(camera_rgba_image)
+        # plt.pause(1e-9)
 
         # ########################## After ##################
         # Convert camera tensors, view matrices, and projection matrices to device
@@ -735,11 +671,11 @@ class QbHandPCD(BaseTaskQb):
         # remove points below 4 cm in z axis
         mask_if = points_envs[:, :, 2] > 0.04
         mask_if = mask_if.unsqueeze(-1).expand(-1, -1, 3)
-        eff_points = torch.where(mask_if, points_envs, torch.zeros_like(points_envs) - 10)
+        eff_points = torch.where(mask_if, points_envs, torch.zeros_like(points_envs) - 0.001)
         if sample_mathed == 'random':
             # sort in ascending order to remove the table points
             norm_tensor = torch.norm(eff_points, p=2, dim=2)  # compute norm of x, y, z
-            sorted_tensor, sorted_indices = torch.sort(norm_tensor, dim=1, descending=False)
+            sorted_tensor, sorted_indices = torch.sort(norm_tensor, dim=1, descending=True)
             sorted_indices_exp = sorted_indices.unsqueeze(-1).expand(-1, -1, 3)  # expand tensor for 3D
             sorted_tensor = eff_points.gather(1, sorted_indices_exp)
 
@@ -755,11 +691,11 @@ class QbHandPCD(BaseTaskQb):
             self.o3d_pc.points = o3d.utility.Vector3dVector(points)
             # self.o3d_pc.colors = o3d.utility.Vector3dVector(colors[..., :3])
 
-        if not self.pointCloudVisualizerInitialized:
-            self.pointCloudVisualizer.add_geometry(self.o3d_pc)
-            self.pointCloudVisualizerInitialized = True
-        else:
-            self.pointCloudVisualizer.update(self.o3d_pc)
+        # if not self.pointCloudVisualizerInitialized:
+        #     self.pointCloudVisualizer.add_geometry(self.o3d_pc)
+        #     self.pointCloudVisualizerInitialized = True
+        # else:
+        #     self.pointCloudVisualizer.update(self.o3d_pc)
 
         self.gym.end_access_image_tensors(self.sim)
         # point cloud minus origin?? to normalize to 0
@@ -932,9 +868,9 @@ class QbHandPCD(BaseTaskQb):
             #     self.shadow_hand_dof_lower_limits[self.actuated_dof_indices],
             #     self.shadow_hand_dof_upper_limits[self.actuated_dof_indices])
 
-            self.root_state_tensor[self.goal_object_indices, :3] = self.rigid_body_states[:,  27, 0:3] + self.z_unit_tensor * 0.055 + self.y_unit_tensor * -0.04
-            self.goal_states[:, 0:3] = self.root_state_tensor[self.goal_object_indices, :3]
-            self.gym.set_actor_root_state_tensor(self.sim,  gymtorch.unwrap_tensor(self.root_state_tensor))
+            # self.root_state_tensor[self.goal_object_indices, :3] = self.rigid_body_states[:,  27, 0:3] + self.z_unit_tensor * 0.055 + self.y_unit_tensor * -0.04
+            # self.goal_states[:, 0:3] = self.root_state_tensor[self.goal_object_indices, :3]
+            # self.gym.set_actor_root_state_tensor(self.sim,  gymtorch.unwrap_tensor(self.root_state_tensor))
 
         self.prev_targets[:, self.actuated_dof_indices] = self.cur_targets[:, self.actuated_dof_indices]
         # self.prev_targets[:, self.actuated_dof_indices + 24] = self.cur_targets[:, self.actuated_dof_indices + 24]

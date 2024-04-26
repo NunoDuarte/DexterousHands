@@ -401,7 +401,7 @@ class ShadowHandPCDtest(BaseTask):
 
         self.camera_v2, self.camera_u2 = torch.meshgrid(self.camera_v, self.camera_u, indexing='ij')
 
-        if False:
+        if True:
             import open3d as o3d
             from bidexhands.utils.o3dviewer import PointcloudVisualizer
             self.pointCloudVisualizer = PointcloudVisualizer()
@@ -651,12 +651,12 @@ class ShadowHandPCDtest(BaseTask):
 
         point_clouds = torch.zeros((self.num_envs, self.pointCloudDownsampleNum, 3), device=self.device)
 
-        # # plot an image every step of env 0
-        # self.camera_rgba_debug_fig = plt.figure("CAMERA_RGBD_DEBUG")
-        # camera_rgba_image = self.camera_visulization(is_depth_image=False)
-        # print(camera_rgba_image)
-        # plt.imshow(camera_rgba_image)
-        # plt.pause(1e-9)
+        # plot an image every step of env 0
+        self.camera_rgba_debug_fig = plt.figure("CAMERA_RGBD_DEBUG")
+        camera_rgba_image = self.camera_visulization(is_depth_image=False)
+        print(camera_rgba_image)
+        plt.imshow(camera_rgba_image)
+        plt.pause(1e-9)
 
         # for i in range(self.num_envs):
         # points = depth_image_to_point_cloud_GPU(self.camera_tensors[i], self.camera_view_matrixs[i], self.camera_proj_matrixs[i], self.camera_u2, self.camera_v2, self.camera_props.width, self.camera_props.height, 10, self.device)
@@ -732,12 +732,12 @@ class ShadowHandPCDtest(BaseTask):
         # remove points below 4 cm in z axis
         mask_if = points_envs[:, :, 2] > 0.04
         mask_if = mask_if.unsqueeze(-1).expand(-1, -1, 3)
-        eff_points = torch.where(mask_if, points_envs, torch.zeros_like(points_envs) - 10)
+        eff_points = torch.where(mask_if, points_envs, torch.zeros_like(points_envs) + 0.001)
         if sample_mathed == 'random':
 
             # sort in ascending order to remove the table points
             norm_tensor = torch.norm(eff_points, p=2, dim=2)         # compute norm of x, y, z
-            sorted_tensor, sorted_indices = torch.sort(norm_tensor, dim=1, descending=False)
+            sorted_tensor, sorted_indices = torch.sort(norm_tensor, dim=1, descending=True)
             sorted_indices_exp = sorted_indices.unsqueeze(-1).expand(-1, -1, 3)    # expand tensor for 3D
             sorted_tensor = eff_points.gather(1, sorted_indices_exp)
 
@@ -748,16 +748,16 @@ class ShadowHandPCDtest(BaseTask):
 
         if self.pointCloudVisualizer is not None:
             import open3d as o3d
-            points = point_clouds[0, :, :3].cpu().numpy()
+            points = point_clouds[15, :, :3].cpu().numpy()
             # colors = plt.get_cmap()(point_clouds[0, :, 3].cpu().numpy())
             self.o3d_pc.points = o3d.utility.Vector3dVector(points)
             # self.o3d_pc.colors = o3d.utility.Vector3dVector(colors[..., :3])
 
-        # if not self.pointCloudVisualizerInitialized:
-        #     self.pointCloudVisualizer.add_geometry(self.o3d_pc)
-        #     self.pointCloudVisualizerInitialized = True
-        # else:
-        #     self.pointCloudVisualizer.update(self.o3d_pc)
+        if not self.pointCloudVisualizerInitialized:
+            self.pointCloudVisualizer.add_geometry(self.o3d_pc)
+            self.pointCloudVisualizerInitialized = True
+        else:
+            self.pointCloudVisualizer.update(self.o3d_pc)
 
         self.gym.end_access_image_tensors(self.sim)
         # point cloud minus origin?? to normalize to 0

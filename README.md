@@ -1,4 +1,5 @@
 # This a detached fork of the original work. Please check the original work for the oficial release. This repo has my updates/trials.
+It could have bugs or mistakes. Please open an issue if you found anything that needs fixing.
 
 ## Bi-DexHands: Bimanual Dexterous Manipulation via Reinforcement Learning
 <img src="assets/image_folder/coverv3.jpg" width="1000" border="1"/>

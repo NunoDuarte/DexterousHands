@@ -227,7 +227,7 @@ class QbHandPCD(BaseTaskQb):
         lower = gymapi.Vec3(-spacing, -spacing, 0.0)
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
-        asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../IsaacGymEnvs/assets")
+        asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../DexterousHands/assets")
         robot_asset_file = "urdf/qb_hand/urdf/arm_qbhand_iit.urdf"
 
         object_asset_file = self.asset_files_dict[self.object_type]

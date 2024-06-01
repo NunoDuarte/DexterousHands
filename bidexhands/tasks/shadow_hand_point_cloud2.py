@@ -596,6 +596,8 @@ class ShadowHandPCDtest(BaseTask):
         num_ft_states = 13 * int(self.num_fingertips / 2)  # 65
         num_ft_force_torques = 6 * int(self.num_fingertips / 2)  # 30
 
+        print('hello1', self.obs_buf)
+        print(self.obs_buf.shape)
         self.obs_buf[:, 0:self.num_shadow_hand_dofs] = unscale(self.shadow_hand_dof_pos,
                                                                self.shadow_hand_dof_lower_limits,
                                                                self.shadow_hand_dof_upper_limits)
@@ -720,7 +722,7 @@ class ShadowHandPCDtest(BaseTask):
         position = torch.stack((X, Y, Z, ones), dim=1)
         valid_expanded = valid.unsqueeze(1).repeat(1, 4, 1)  # Shape: [2, 4, 56000]
         # position = position[valid_expanded]  # Shape: [2, 4, 56000]       # removes False values
-        position = torch.where(valid_expanded, position, torch.zeros_like(position))    # False values are 0.0
+        position = torch.where(valid_expanded, position, torch.zeros_like(position))  # False values are 0.0
         position = position.view(self.num_envs, 4, -1)
         position = position.permute(0, 2, 1)
         position = position @ vinv_tensor
@@ -736,9 +738,9 @@ class ShadowHandPCDtest(BaseTask):
         if sample_mathed == 'random':
 
             # sort in ascending order to remove the table points
-            norm_tensor = torch.norm(eff_points, p=2, dim=2)         # compute norm of x, y, z
+            norm_tensor = torch.norm(eff_points, p=2, dim=2)  # compute norm of x, y, z
             sorted_tensor, sorted_indices = torch.sort(norm_tensor, dim=1, descending=True)
-            sorted_indices_exp = sorted_indices.unsqueeze(-1).expand(-1, -1, 3)    # expand tensor for 3D
+            sorted_indices_exp = sorted_indices.unsqueeze(-1).expand(-1, -1, 3)  # expand tensor for 3D
             sorted_tensor = eff_points.gather(1, sorted_indices_exp)
 
             row_total = int(sorted_tensor.shape[1]/8)   # select only 1/8 of tensor to not select table points
@@ -748,7 +750,7 @@ class ShadowHandPCDtest(BaseTask):
 
         if self.pointCloudVisualizer is not None:
             import open3d as o3d
-            points = point_clouds[15, :, :3].cpu().numpy()
+            points = point_clouds[0, :, :3].cpu().numpy()
             # colors = plt.get_cmap()(point_clouds[0, :, 3].cpu().numpy())
             self.o3d_pc.points = o3d.utility.Vector3dVector(points)
             # self.o3d_pc.colors = o3d.utility.Vector3dVector(colors[..., :3])
@@ -906,9 +908,9 @@ class ShadowHandPCDtest(BaseTask):
                                                                        self.actuated_dof_indices])
             self.cur_targets[:, self.actuated_dof_indices] = self.act_moving_average * self.cur_targets[:,
                                                                                        self.actuated_dof_indices] + (
-                                                                         1.0 - self.act_moving_average) * self.prev_targets[
-                                                                                                          :,
-                                                                                                          self.actuated_dof_indices]
+                                                                     1.0 - self.act_moving_average) * self.prev_targets[
+                                                                                                      :,
+                                                                                                      self.actuated_dof_indices]
             self.cur_targets[:, self.actuated_dof_indices] = tensor_clamp(
                 self.cur_targets[:, self.actuated_dof_indices],
                 self.shadow_hand_dof_lower_limits[self.actuated_dof_indices],
@@ -994,9 +996,12 @@ class ShadowHandPCDtest(BaseTask):
         else:
             camera_rgba_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, self.envs[0], self.cameras[0],
                                                                       gymapi.IMAGE_COLOR)
+            print('hello', camera_rgba_tensor)
             torch_rgba_tensor = gymtorch.wrap_tensor(camera_rgba_tensor)
             camera_image = torch_rgba_tensor.cpu().numpy()
+            print('hello', camera_image)
             camera_image = Image.fromarray(camera_image)
+
 
         return camera_image
 
@@ -1096,7 +1101,7 @@ def compute_hand_reward(
     finished_cons_successes = torch.sum(successes * resets.float())
 
     cons_successes = torch.where(num_resets > 0, av_factor * finished_cons_successes / num_resets + (
-                1.0 - av_factor) * consecutive_successes, consecutive_successes)
+            1.0 - av_factor) * consecutive_successes, consecutive_successes)
 
     return reward, resets, goal_resets, progress_buf, successes, cons_successes
 

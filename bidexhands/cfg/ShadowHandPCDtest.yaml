@@ -1,7 +1,7 @@
 # if given, will override the device setting in gym.
 env:
   env_name: "ShadowHandPCD"
-  numEnvs: 256
+  numEnvs: 1
   envSpacing: 1.5
   episodeLength: 125
   enableDebugVis: False

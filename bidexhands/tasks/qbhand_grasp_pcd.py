@@ -383,7 +383,7 @@ class QbHandPCD(BaseTaskQb):
 
         self.camera_v2, self.camera_u2 = torch.meshgrid(self.camera_v, self.camera_u, indexing='ij')
 
-        if True:
+        if False:
             import open3d as o3d
             from bidexhands.utils.o3dviewer import PointcloudVisualizer
             self.pointCloudVisualizer = PointcloudVisualizer()
@@ -621,11 +621,11 @@ class QbHandPCD(BaseTaskQb):
         goal_obs_start = self.full_state
 
         # plot an image every step of env 0
-        self.camera_rgba_debug_fig = plt.figure("CAMERA_RGBD_DEBUG")
-        camera_rgba_image = self.camera_visulization(is_depth_image=False)
-        print(camera_rgba_image)
-        plt.imshow(camera_rgba_image)
-        plt.pause(1e-9)
+        #self.camera_rgba_debug_fig = plt.figure("CAMERA_RGBD_DEBUG")
+        #camera_rgba_image = self.camera_visulization(is_depth_image=False)
+        #print(camera_rgba_image)
+        #plt.imshow(camera_rgba_image)
+        #plt.pause(1e-9)
 
         # ########################## After ##################
         # Convert camera tensors, view matrices, and projection matrices to device
@@ -692,11 +692,11 @@ class QbHandPCD(BaseTaskQb):
             self.o3d_pc.points = o3d.utility.Vector3dVector(points)
             # self.o3d_pc.colors = o3d.utility.Vector3dVector(colors[..., :3])
 
-        if not self.pointCloudVisualizerInitialized:
-            self.pointCloudVisualizer.add_geometry(self.o3d_pc)
-            self.pointCloudVisualizerInitialized = True
-        else:
-            self.pointCloudVisualizer.update(self.o3d_pc)
+        #if not self.pointCloudVisualizerInitialized:
+        #    self.pointCloudVisualizer.add_geometry(self.o3d_pc)
+        #    self.pointCloudVisualizerInitialized = True
+        #else:
+        #    self.pointCloudVisualizer.update(self.o3d_pc)
 
         self.gym.end_access_image_tensors(self.sim)
         # point cloud minus origin?? to normalize to 0

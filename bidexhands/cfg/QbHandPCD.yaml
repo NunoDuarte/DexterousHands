@@ -24,7 +24,7 @@ env:
   controlFrequencyInv: 1 # 60 Hz
   
   armControlType: osc  # options are {osc, pos}
-  handControlType: effort # options are {binary}
+  handControlType: binary # options are {binary}
   
   startPositionNoise: 0.0
   startRotationNoise: 0.0
